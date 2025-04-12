@@ -84,4 +84,16 @@ dependencies {
 
 //	Ktor Dependencies
 	implementation(libs.ktor.client.core)
+
+//	ExoPlayer Dependencies for Video Playback
+	implementation(libs.androidx.media3.exoplayer)
+	implementation(libs.androidx.media3.exoplayer.dash)
+	implementation(libs.androidx.media3.ui)
+
+//	Coil for Image Loading
+	implementation(libs.coil.compose)
+	implementation(libs.coil.network.okhttp)
+
+//	Compose Pager for snapping behavior
+	implementation(libs.androidx.foundation)
 }
