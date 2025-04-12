@@ -60,6 +60,12 @@ dependencies {
 	debugImplementation(libs.androidx.ui.tooling)
 	debugImplementation(libs.androidx.ui.test.manifest)
 
+//	Navigation Dependencies
+	implementation(libs.androidx.navigation.compose)
+
+//	Icons Dependencies
+	implementation(libs.androidx.material.icons.extended)
+
 //	Firebase SDK Dependencies
 	implementation(libs.firebase.auth)
 	implementation(libs.androidx.credentials)
@@ -71,4 +77,11 @@ dependencies {
 //	Coroutines Dependencies
 	implementation(libs.kotlinx.coroutines.core)
 	implementation(libs.kotlinx.coroutines.android)
+
+//	Retrofit Dependencies
+	implementation(libs.retrofit)
+	implementation(libs.converter.gson)
+
+//	Ktor Dependencies
+	implementation(libs.ktor.client.core)
 }
