@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.xyzen.firebase.FirebaseServiceClass
 import com.example.xyzen.model.Video
@@ -37,7 +39,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun FeedScreen() {
+fun FeedScreen(navController: NavController) {
     val context = LocalContext.current
     val firebaseService = remember { FirebaseServiceClass() }
     val coroutineScope = rememberCoroutineScope()
@@ -116,7 +118,7 @@ fun FeedScreen() {
                 }
             }
             else -> {
-                VideoFeed(videos = videos)
+                VideoFeed(videos = videos, navController)
             }
         }
     }
@@ -124,7 +126,7 @@ fun FeedScreen() {
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun VideoFeed(videos: List<Video>) {
+fun VideoFeed(videos: List<Video>, navController: NavController) {
     val pagerState = rememberPagerState()
 
     // Track the currently playing video
@@ -207,20 +209,7 @@ fun VideoFeed(videos: List<Video>) {
                     .padding(16.dp)
             ) {
                 // Like button
-                IconButton(
-                    onClick = { /* Like functionality */ },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.3f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = "Like",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                LikeButton(videoId = video.id, initialLikeCount = video.likes)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -308,5 +297,55 @@ fun VideoPlayer(videoUrl: String, isPlaying: Boolean) {
             }
         },
         modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+fun LikeButton(videoId: String, initialLikeCount: Int) {
+    val firebaseService = remember { FirebaseServiceClass() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // State variables
+    var isLiked by remember { mutableStateOf(false) }
+    var likeCount by remember { mutableStateOf(initialLikeCount) }
+
+    // Check if video is liked when component is first displayed
+    LaunchedEffect(videoId) {
+        coroutineScope.launch {
+            firebaseService.checkIfUserLikedVideo(videoId).fold(
+                onSuccess = { liked ->
+                    isLiked = liked
+                },
+                onFailure = { /* Handle error */ }
+            )
+        }
+    }
+
+    // Like button
+    IconButton(
+        onClick = {
+            coroutineScope.launch {
+                firebaseService.likeVideo(videoId).fold(
+                    onSuccess = { liked ->
+                        isLiked = !isLiked
+                        likeCount = if (isLiked) likeCount + 1 else likeCount - 1
+                    },
+                    onFailure = { /* Handle error */ }
+                )
+            }
+        }
+    ) {
+        Icon(
+            imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+            contentDescription = "Like",
+            tint = if (isLiked) Color.Red else Color.White,
+            modifier = Modifier.size(28.dp)
+        )
+    }
+
+    Text(
+        text = "$likeCount",
+        style = MaterialTheme.typography.bodySmall,
+        color = Color.White
     )
 }

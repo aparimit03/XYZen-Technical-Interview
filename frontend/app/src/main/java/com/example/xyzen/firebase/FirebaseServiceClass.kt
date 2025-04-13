@@ -6,6 +6,7 @@ import com.example.xyzen.model.Video
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
@@ -173,6 +174,66 @@ class FirebaseServiceClass() {
 			} else {
 				Result.failure(Exception("Video not found"))
 			}
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	suspend fun likeVideo(videoId: String): Result<Boolean> {
+		return try {
+			val currentUser = getCurrentUser() ?: throw Exception("User not logged in")
+
+			// Check if user already liked the video
+			val likeDoc = firestore.collection("likes")
+				.whereEqualTo("videoId", videoId)
+				.whereEqualTo("userId", currentUser.uid)
+				.get()
+				.await()
+
+			val videoRef = firestore.collection("videos").document(videoId)
+			val isLiked = likeDoc.isEmpty
+
+			if (isLiked) {
+				// User hasn't liked the video yet, add like
+				val likeData = hashMapOf(
+					"videoId" to videoId,
+					"userId" to currentUser.uid,
+					"timestamp" to Timestamp.now()
+				)
+
+				// Add to likes collection
+				firestore.collection("likes").add(likeData).await()
+
+				// Update video like count
+				videoRef.update("likes", FieldValue.increment(1)).await()
+			} else {
+				// User already liked the video, remove like
+				val likeDocId = likeDoc.documents[0].id
+
+				// Remove from likes collection
+				firestore.collection("likes").document(likeDocId).delete().await()
+
+				// Update video like count
+				videoRef.update("likes", FieldValue.increment(-1)).await()
+			}
+
+			Result.success(isLiked)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	suspend fun checkIfUserLikedVideo(videoId: String): Result<Boolean> {
+		return try {
+			val currentUser = getCurrentUser() ?: return Result.success(false)
+
+			val likeDoc = firestore.collection("likes")
+				.whereEqualTo("videoId", videoId)
+				.whereEqualTo("userId", currentUser.uid)
+				.get()
+				.await()
+
+			Result.success(!likeDoc.isEmpty)
 		} catch (e: Exception) {
 			Result.failure(e)
 		}

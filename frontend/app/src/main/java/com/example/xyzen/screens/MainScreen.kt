@@ -26,7 +26,7 @@ fun MainScreen() {
 			startDestination = BottomNavItem.Feed.route,
 			modifier = Modifier.padding(innerPadding)
 		) {
-			composable(BottomNavItem.Feed.route) { FeedScreen() }
+			composable(BottomNavItem.Feed.route) { FeedScreen(navController) }
 			composable(BottomNavItem.Upload.route) { UploadScreen() }
 			composable(BottomNavItem.Profile.route) { ProfileScreen(navController) }
 			composable(BottomNavItem.Notifications.route) { NotificationsScreen() }
