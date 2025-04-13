@@ -76,12 +76,17 @@ class FirebaseServiceClass() {
 			val uploadTask = storageRef.putFile(videoUri).await()
 			val videoUrl = storageRef.downloadUrl.await().toString()
 
+			// Generate a thumbnail URL (using the video URL for now)
+			// In a production app, you would generate an actual thumbnail
+			val thumbnailUrl = videoUrl
+
 			// Link Video URL in Firestore
 			val video = Video(
 				id = videoId,
 				userId = userId,
 				caption = caption,
 				videoUrl = videoUrl,
+				thumbnailUrl = thumbnailUrl,
 				timestamp = Timestamp.now()
 			)
 
@@ -91,7 +96,7 @@ class FirebaseServiceClass() {
 				.set(video)
 				.await()
 
-			// 4. Update user's videos list
+			// Update user's videos list
 			firestore.collection("users")
 				.document(userId)
 				.update("videos", com.google.firebase.firestore.FieldValue.arrayUnion(videoId))
@@ -117,6 +122,43 @@ class FirebaseServiceClass() {
 
 			Result.success(videos)
 		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	suspend fun getUserData(userId: String): Result<User> {
+		return try {
+			val userDoc = firestore.collection("users").document(userId).get().await()
+			val user = userDoc.toObject(User::class.java)
+
+			if (user != null) {
+				Result.success(user)
+			} else {
+				Result.failure(Exception("User not found"))
+			}
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	suspend fun getUserVideos(userId: String): Result<List<Video>> {
+		return try {
+			val videosSnapshot = firestore.collection("videos")
+				.whereEqualTo("userId", userId)
+				.orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+				.get()
+				.await()
+
+			val videos = videosSnapshot.documents.mapNotNull { doc ->
+				doc.toObject(Video::class.java)
+			}
+
+			// Log the number of videos found for debugging
+			println("Found ${videos.size} videos for user $userId")
+
+			Result.success(videos)
+		} catch (e: Exception) {
+			println("Error fetching user videos: ${e.message}")
 			Result.failure(e)
 		}
 	}

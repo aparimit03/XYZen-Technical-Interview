@@ -1,56 +1,312 @@
 package com.example.xyzen.screens
 
-import androidx.compose.foundation.Image
+import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.VerticalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil3.compose.rememberAsyncImagePainter
-import com.example.xyzen.components.VideoPlayer
-import com.example.xyzen.model.SampleVideoData
-import com.example.xyzen.model.VideoItem
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import coil3.compose.AsyncImage
+import com.example.xyzen.firebase.FirebaseServiceClass
+import com.example.xyzen.model.Video
+import com.google.accompanist.pager.ExperimentalPagerApi
+import com.google.accompanist.pager.VerticalPager
+import com.google.accompanist.pager.rememberPagerState
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalPagerApi::class)
 @Composable
 fun FeedScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Feed Screen")
+    val context = LocalContext.current
+    val firebaseService = remember { FirebaseServiceClass() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // State variables
+    var videos by remember { mutableStateOf<List<Video>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Fetch videos when the screen is first displayed
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            try {
+                val result = firebaseService.getVideosForFeed(20) // Fetch up to 20 videos
+                result.fold(
+                    onSuccess = { fetchedVideos ->
+                        videos = fetchedVideos
+                        isLoading = false
+                    },
+                    onFailure = { error ->
+                        errorMessage = "Failed to load videos: ${error.message}"
+                        isLoading = false
+                    }
+                )
+            } catch (e: Exception) {
+                errorMessage = "An error occurred: ${e.message}"
+                isLoading = false
+            }
+        }
     }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            isLoading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            errorMessage != null -> {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Failed to load videos",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage ?: "Unknown error",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            videos.isEmpty() -> {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No videos available",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Videos you upload will appear here",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            else -> {
+                VideoFeed(videos = videos)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalPagerApi::class)
+@Composable
+fun VideoFeed(videos: List<Video>) {
+    val pagerState = rememberPagerState()
+
+    // Track the currently playing video
+    var currentlyPlayingPage by remember { mutableStateOf(0) }
+
+    // Update the currently playing page when the pager changes
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            currentlyPlayingPage = page
+        }
+    }
+
+    VerticalPager(
+        count = videos.size,
+        state = pagerState,
+        modifier = Modifier.fillMaxSize()
+    ) { page ->
+        val video = videos[page]
+        val isCurrentlyPlaying = page == currentlyPlayingPage
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Video player
+            VideoPlayer(
+                videoUrl = video.videoUrl,
+                isPlaying = isCurrentlyPlaying
+            )
+
+            // Overlay with video info and actions
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                // User info
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    // Profile picture
+                    AsyncImage(
+                        model = "https://via.placeholder.com/40", // Placeholder for user profile image
+                        contentDescription = "User profile",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Username
+                    Text(
+                        text = "@user_${video.userId.take(5)}", // Simplified username display
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Caption (if any)
+                if (video.caption.isNotEmpty()) {
+                    Text(
+                        text = video.caption,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+            }
+
+            // Action buttons (like, share, etc.)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                // Like button
+                IconButton(
+                    onClick = { /* Like functionality */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FavoriteBorder,
+                        contentDescription = "Like",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Profile button
+                IconButton(
+                    onClick = { /* Go to profile */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Profile",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // More options
+                IconButton(
+                    onClick = { /* More options */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+				}
+			}
+		}
+	}
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+fun VideoPlayer(videoUrl: String, isPlaying: Boolean) {
+    val context = LocalContext.current
+
+    // Create and remember the ExoPlayer
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            repeatMode = Player.REPEAT_MODE_ONE
+            playWhenReady = false
+            prepare()
+        }
+    }
+
+    // Set up the media item when the video URL changes
+    LaunchedEffect(videoUrl) {
+        exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
+        exoPlayer.prepare()
+    }
+
+    // Control playback based on whether this video is currently visible
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            exoPlayer.playWhenReady = true
+        } else {
+            exoPlayer.playWhenReady = false
+        }
+    }
+
+    // Clean up the ExoPlayer when the composable is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    // Render the PlayerView
+    AndroidView(
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                player = exoPlayer
+                useController = false // Hide the default controls
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM // Fill the screen
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }
