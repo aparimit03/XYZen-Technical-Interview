@@ -73,6 +73,7 @@ dependencies {
 	implementation(libs.googleid)
 	implementation(libs.firebase.database)
 	implementation(libs.firebase.firestore)
+	implementation(libs.firebase.storage)
 
 //	Coroutines Dependencies
 	implementation(libs.kotlinx.coroutines.core)
