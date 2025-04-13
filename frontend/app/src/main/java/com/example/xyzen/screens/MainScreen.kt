@@ -28,8 +28,12 @@ fun MainScreen() {
 		) {
 			composable(BottomNavItem.Feed.route) { FeedScreen() }
 			composable(BottomNavItem.Upload.route) { UploadScreen() }
-			composable(BottomNavItem.Profile.route) { ProfileScreen() }
+			composable(BottomNavItem.Profile.route) { ProfileScreen(navController) }
 			composable(BottomNavItem.Notifications.route) { NotificationsScreen() }
+			composable("video_detail/{videoId}") { backStackEntry ->
+				val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
+				VideoDetailScreen(navController, videoId)
+			}
 		}
 	}
 }

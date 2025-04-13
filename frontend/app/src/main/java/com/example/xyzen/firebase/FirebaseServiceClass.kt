@@ -162,4 +162,19 @@ class FirebaseServiceClass() {
 			Result.failure(e)
 		}
 	}
+
+	suspend fun getVideoById(videoId: String): Result<Video> {
+		return try {
+			val videoDoc = firestore.collection("videos").document(videoId).get().await()
+			val video = videoDoc.toObject(Video::class.java)
+
+			if (video != null) {
+				Result.success(video)
+			} else {
+				Result.failure(Exception("Video not found"))
+			}
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
 }

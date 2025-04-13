@@ -34,15 +34,18 @@ import com.example.xyzen.model.User
 import com.example.xyzen.model.Video
 import kotlinx.coroutines.launch
 import android.content.Intent
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.example.xyzen.AuthenticationActivity
 import com.example.xyzen.MainActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(navController: NavController) {
 	val context = LocalContext.current
 	val activity = context as? MainActivity
 	val firebaseService = remember { FirebaseServiceClass() }
@@ -198,6 +201,7 @@ fun ProfileScreen() {
 								items(userVideos) { video ->
 									VideoThumbnail(video = video) {
 										// Handle video click - navigate to video detail
+										navController.navigate("video_detail/${video.id}")
 									}
 								}
 							}
@@ -317,29 +321,40 @@ fun VideoThumbnail(video: Video, onClick: () -> Unit) {
 			.background(MaterialTheme.colorScheme.surfaceVariant)
 			.clickable(onClick = onClick)
 	) {
-		// If there's a thumbnail URL, load it
-		if (video.thumbnailUrl.isNotEmpty()) {
-			Image(
-				painter = rememberAsyncImagePainter(video.thumbnailUrl),
+		// Try to load the video thumbnail or fallback to the video itself
+		val imageUrl = if (video.thumbnailUrl.isNotEmpty()) {
+			video.thumbnailUrl
+		} else if (video.videoUrl.isNotEmpty()) {
+			video.videoUrl
+		} else {
+			""
+		}
+
+		if (imageUrl.isNotEmpty()) {
+			AsyncImage(
+				model = imageUrl,
 				contentDescription = "Video thumbnail",
 				modifier = Modifier.fillMaxSize(),
-				contentScale = ContentScale.Crop
+				contentScale = ContentScale.Crop,
+				onError = {
+					// If loading fails, we'll show the placeholder below
+				}
 			)
-		} else {
-			// Show a placeholder with an icon
-			Box(
-				modifier = Modifier
-					.fillMaxSize()
-					.padding(4.dp),
-				contentAlignment = Alignment.Center
-			) {
-				Icon(
-					imageVector = Icons.Default.VideoLibrary,
-					contentDescription = "Video",
-					modifier = Modifier.size(48.dp),
-					tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-				)
-			}
+		}
+
+		// Always show a semi-transparent overlay with a play icon
+		Box(
+			modifier = Modifier
+				.fillMaxSize()
+				.background(Color.Black.copy(alpha = 0.3f)),
+			contentAlignment = Alignment.Center
+		) {
+			Icon(
+				imageVector = Icons.Default.PlayArrow,
+				contentDescription = "Play video",
+				tint = Color.White,
+				modifier = Modifier.size(48.dp)
+			)
 		}
 	}
 }
