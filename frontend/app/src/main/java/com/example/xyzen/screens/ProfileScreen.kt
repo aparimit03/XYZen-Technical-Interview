@@ -38,11 +38,13 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.example.xyzen.AuthenticationActivity
+import com.example.xyzen.MainActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen() {
 	val context = LocalContext.current
+	val activity = context as? MainActivity
 	val firebaseService = remember { FirebaseServiceClass() }
 	val coroutineScope = rememberCoroutineScope()
 
@@ -104,7 +106,7 @@ fun ProfileScreen() {
 				actions = {
 					IconButton(onClick = {
 						firebaseService.signOut()
-						context.startActivity(Intent(context, AuthenticationActivity::class.java))
+						activity?.signOutFromApp()
 					}) {
 						Icon(
 							imageVector = Icons.Default.ExitToApp,

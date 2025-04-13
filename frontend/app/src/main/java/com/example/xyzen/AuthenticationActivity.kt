@@ -20,7 +20,6 @@ class AuthenticationActivity : ComponentActivity() {
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 
-		// Check if user is already logged in
 		if (FirebaseServiceClass().isUserLoggedIn()) {
 			startActivity(Intent(this, MainActivity::class.java)).also {
 				finish()

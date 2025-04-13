@@ -1,5 +1,6 @@
 package com.example.xyzen
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,5 +35,13 @@ class MainActivity : ComponentActivity() {
 				MainScreen()
 			}
 		}
+	}
+
+	fun signOutFromApp(){
+		startActivity(
+			Intent(this, AuthenticationActivity::class.java).also {
+				finish()
+			}
+		)
 	}
 }

@@ -2,6 +2,8 @@ package com.example.xyzen.screens
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,23 +31,27 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseUser
+import androidx.compose.ui.unit.sp
 import com.example.xyzen.MainActivity
 import com.example.xyzen.firebase.FirebaseServiceClass
+import com.example.xyzen.ui.theme.montserratFontFamily
+import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
 
 @Preview(showBackground = true)
 @Composable
 fun AuthenticationScreen() {
 	var isLogin by remember {
-		mutableStateOf(false)
+		mutableStateOf(true)
 	}
 	var email by remember {
 		mutableStateOf("")
@@ -65,8 +71,10 @@ fun AuthenticationScreen() {
 	var errorMessage by remember {
 		mutableStateOf<String?>(null)
 	}
+
 	val coroutineScope = rememberCoroutineScope()
 	val context = LocalContext.current
+
 	val firebaseService = remember {
 		FirebaseServiceClass()
 	}
@@ -79,7 +87,10 @@ fun AuthenticationScreen() {
 	) {
 		Text(
 			text = if (isLogin) "Login" else "Register",
-			style = MaterialTheme.typography.headlineMedium,
+			fontSize = 24.sp,
+			color = Color.Black,
+			fontFamily = montserratFontFamily,
+			fontWeight = FontWeight.SemiBold,
 			modifier = Modifier.padding(vertical = 16.dp)
 		)
 		Spacer(
@@ -89,9 +100,19 @@ fun AuthenticationScreen() {
 		if (!isLogin) {
 			OutlinedTextField(
 				value = userName,
-				onValueChange = { userName = it },
-				label = { Text("Username") },
-				leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username") },
+				onValueChange = {
+					userName = it
+				},
+				label = {
+					Text(
+						text = "Username",
+						fontFamily = montserratFontFamily,
+						fontWeight = FontWeight.Medium,
+					)
+				},
+				leadingIcon = {
+					Icon(Icons.Default.Person, contentDescription = "Username")
+				},
 				modifier = Modifier.fillMaxWidth(),
 				singleLine = true,
 				keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
@@ -100,9 +121,20 @@ fun AuthenticationScreen() {
 		}
 		OutlinedTextField(
 			value = email,
-			onValueChange = { email = it },
-			label = { Text("Email") },
-			leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
+			onValueChange = {
+				email = it
+			},
+			label = {
+				Text(
+					text = "Email",
+					fontFamily = montserratFontFamily,
+					fontWeight = FontWeight.Medium,
+
+					)
+			},
+			leadingIcon = {
+				Icon(Icons.Default.Email, contentDescription = "Email")
+			},
 			modifier = Modifier.fillMaxWidth(),
 			singleLine = true,
 			keyboardOptions = KeyboardOptions(
@@ -115,9 +147,19 @@ fun AuthenticationScreen() {
 
 		OutlinedTextField(
 			value = password,
-			onValueChange = { password = it },
-			label = { Text("Password") },
-			leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
+			onValueChange = {
+				password = it
+			},
+			label = {
+				Text(
+					text = "Password",
+					fontFamily = montserratFontFamily,
+					fontWeight = FontWeight.Medium,
+				)
+			},
+			leadingIcon = {
+				Icon(Icons.Default.Lock, contentDescription = "Password")
+			},
 			trailingIcon = {
 				IconButton(onClick = { passwordVisible = !passwordVisible }) {
 					Icon(
@@ -149,24 +191,15 @@ fun AuthenticationScreen() {
 			onClick = {
 				if (!isLogin && userName.isBlank()) {
 					errorMessage = "Username cannot be empty"
-				}
-
-				else if (email.isBlank()) {
+				} else if (email.isBlank()) {
 					errorMessage = "Email cannot be empty"
-				}
-
-				else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+				} else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
 					errorMessage = "Please enter a valid email address"
-				}
-
-				else if (password.isBlank()) {
+				} else if (password.isBlank()) {
 					errorMessage = "Password cannot be empty"
-				}
-
-				else if (!isLogin && password.length < 6) {
+				} else if (!isLogin && password.length < 6) {
 					errorMessage = "Password must be at least 6 characters"
-				}
-				else{
+				} else {
 					isLoading = true
 					errorMessage = null
 
@@ -214,7 +247,6 @@ fun AuthenticationScreen() {
 private fun handleAuthResult(result: Result<FirebaseUser>, context: Context) {
 	result.fold(
 		onSuccess = {
-			// Navigate to MainActivity
 			context.startActivity(
 				Intent(context, MainActivity::class.java).also { intent ->
 					intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -222,7 +254,8 @@ private fun handleAuthResult(result: Result<FirebaseUser>, context: Context) {
 			)
 		},
 		onFailure = { exception ->
-			var errorMessage = when {
+			Log.d("Authentication", "Error: ${exception.message}")
+			val errorMessage = when {
 				exception.message?.contains("email address is already in use") == true ->
 					"Email is already registered"
 
@@ -232,8 +265,16 @@ private fun handleAuthResult(result: Result<FirebaseUser>, context: Context) {
 				exception.message?.contains("no user record") == true ->
 					"No account found with this email"
 
+				exception.message?.contains("auth credential is incorrect") == true ->
+					"Some information is incorrect"
+
 				else -> exception.message ?: "Authentication failed"
 			}
+			Toast.makeText(
+				context,
+				errorMessage,
+				Toast.LENGTH_LONG
+			).show()
 		}
 	)
 }
