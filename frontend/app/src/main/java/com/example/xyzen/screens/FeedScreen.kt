@@ -31,6 +31,7 @@ import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.xyzen.firebase.FirebaseServiceClass
+import com.example.xyzen.model.User
 import com.example.xyzen.model.Video
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.VerticalPager
@@ -147,6 +148,21 @@ fun VideoFeed(videos: List<Video>, navController: NavController) {
         val video = videos[page]
         val isCurrentlyPlaying = page == currentlyPlayingPage
 
+        var creator by remember { mutableStateOf<User?>(null) }
+        val firebaseService = remember { FirebaseServiceClass() }
+        val coroutineScope = rememberCoroutineScope()
+
+        LaunchedEffect(video.userId) {
+            coroutineScope.launch {
+                firebaseService.getUserData(video.userId).fold(
+                    onSuccess = { user ->
+                        creator = user
+                    },
+                    onFailure = { /* Handle error silently */ }
+                )
+            }
+        }
+
         Box(modifier = Modifier.fillMaxSize()) {
             // Video player
             VideoPlayer(
@@ -166,9 +182,9 @@ fun VideoFeed(videos: List<Video>, navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 8.dp)
                 ) {
-                    // Profile picture
+                    // Profile picture - use creator's profile image if available
                     AsyncImage(
-                        model = "https://via.placeholder.com/40", // Placeholder for user profile image
+                        model = creator?.profileImage ?: "https://via.placeholder.com/40",
                         contentDescription = "User profile",
                         modifier = Modifier
                             .size(40.dp)
@@ -181,7 +197,7 @@ fun VideoFeed(videos: List<Video>, navController: NavController) {
 
                     // Username
                     Text(
-                        text = "@user_${video.userId.take(5)}", // Simplified username display
+                        text = creator?.username ?: "...",
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
