@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Public
@@ -169,7 +170,7 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 							activity?.signOutFromApp()
 						}) {
 							Icon(
-								imageVector = Icons.Default.ExitToApp,
+								imageVector = Icons.Default.Logout,
 								contentDescription = "Sign Out"
 							)
 						}
@@ -229,12 +230,6 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 						// Profile header with user info
 						ProfileHeader(
 							user = user!!,
-							onEditClick = {
-								// Only allow editing own profile
-								if (isCurrentUser) {
-									// Navigate to edit profile screen
-								}
-							},
 							showEditButton = isCurrentUser
 						)
 
@@ -360,7 +355,7 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 }
 
 @Composable
-fun ProfileHeader(user: User, onEditClick: () -> Unit, showEditButton: Boolean = true) {
+fun ProfileHeader(user: User, showEditButton: Boolean = true) {
 	Column(
 		horizontalAlignment = Alignment.CenterHorizontally,
 		modifier = Modifier.fillMaxWidth()
@@ -394,20 +389,7 @@ fun ProfileHeader(user: User, onEditClick: () -> Unit, showEditButton: Boolean =
 
 			// Modify the edit button to only show if showEditButton is true
 			if (showEditButton) {
-				IconButton(
-					onClick = onEditClick,
-					modifier = Modifier
-						.size(36.dp)
-						.align(Alignment.BottomEnd)
-						.background(MaterialTheme.colorScheme.primary, CircleShape)
-				) {
-					Icon(
-						imageVector = Icons.Default.Edit,
-						contentDescription = "Edit Profile",
-						tint = MaterialTheme.colorScheme.onPrimary,
-						modifier = Modifier.size(20.dp)
-					)
-				}
+				// Add edit button
 			}
 		}
 

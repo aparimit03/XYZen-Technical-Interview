@@ -23,7 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.example.xyzen.components.GradientButton
 import com.example.xyzen.firebase.FirebaseServiceClass
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -101,7 +103,7 @@ fun UploadScreen() {
 						},
 						modifier = Modifier
 							.align(Alignment.TopEnd)
-							.padding(8.dp)
+							.padding(24.dp)
 							.size(36.dp)
 							.background(
 								color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
@@ -158,18 +160,19 @@ fun UploadScreen() {
 			}
 
 			// Upload button
-			Button(
+			GradientButton(
+				text = if (isUploading) "Uploading... ${(uploadProgress * 100).toInt()}%" else "Upload Video",
 				onClick = {
 					val videoUri = selectedVideoUri
 					if (videoUri == null) {
 						errorMessage = "Please select a video first"
-						return@Button
+						return@GradientButton
 					}
 
 					val currentUser = firebaseService.getCurrentUser()
 					if (currentUser == null) {
 						errorMessage = "You must be logged in to upload videos"
-						return@Button
+						return@GradientButton
 					}
 
 					isUploading = true
@@ -183,7 +186,13 @@ fun UploadScreen() {
 								videoUri = videoUri,
 								videoId = videoId,
 								userId = currentUser.uid,
-								caption = "" // Empty caption
+								caption = "", // Empty caption
+								onProgressUpdate = { progress ->
+									// Update the progress on the main thread
+									MainScope().launch {
+										uploadProgress = progress
+									}
+								}
 							)
 
 							result.fold(
@@ -200,40 +209,14 @@ fun UploadScreen() {
 							errorMessage = "An error occurred: ${e.message}"
 						} finally {
 							isUploading = false
+							uploadProgress = 0f
 						}
 					}
 				},
 				modifier = Modifier
-					.fillMaxWidth()
-					.height(56.dp),
+					.fillMaxWidth(),
 				enabled = selectedVideoUri != null && !isUploading
-			) {
-				if (isUploading) {
-					CircularProgressIndicator(
-						modifier = Modifier.size(24.dp),
-						color = MaterialTheme.colorScheme.onPrimary
-					)
-				} else {
-					Icon(
-						imageVector = Icons.Default.Add,
-						contentDescription = "Upload"
-					)
-					Spacer(modifier = Modifier.width(8.dp))
-					Text("Upload Video")
-				}
-			}
-
-			// Upload progress
-			if (isUploading) {
-				Spacer(modifier = Modifier.height(16.dp))
-				LinearProgressIndicator(
-					modifier = Modifier.fillMaxWidth()
-				)
-				Text(
-					text = "Uploading video...",
-					modifier = Modifier.padding(top = 8.dp)
-				)
-			}
+			)
 		}
 	}
 }

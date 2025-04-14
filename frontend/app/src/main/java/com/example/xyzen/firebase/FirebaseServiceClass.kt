@@ -69,14 +69,21 @@ class FirebaseServiceClass() {
 		videoUri: Uri,
 		videoId: String,
 		userId: String,
-		caption: String
+		caption: String,
+		onProgressUpdate: (Float) -> Unit = {}
 	): Result<Video> {
 		return try {
 			// Uploading video to Firebase Storage
 			val storageRef = firebaseStorage.reference
 				.child("videos/$userId/$videoId.mp4")
 
-			val uploadTask = storageRef.putFile(videoUri).await()
+			// Create and monitor the upload task
+			val uploadTask = storageRef.putFile(videoUri)
+				.addOnProgressListener { taskSnapshot ->
+					val progress = taskSnapshot.bytesTransferred.toFloat() / taskSnapshot.totalByteCount.toFloat()
+					onProgressUpdate(progress)
+				}
+				.await()
 			val videoUrl = storageRef.downloadUrl.await().toString()
 
 			// Generate a thumbnail URL (using the video URL for now)

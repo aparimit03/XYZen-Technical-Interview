@@ -13,8 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.xyzen.components.GradientButton
+import com.example.xyzen.components.ModernTextField
 import com.example.xyzen.firebase.FirebaseServiceClass
 import kotlinx.coroutines.launch
 
@@ -42,41 +45,6 @@ fun CreatePlaylistScreen(navController: NavController) {
 							contentDescription = "Back"
 						)
 					}
-				},
-				actions = {
-					// Save button
-					IconButton(
-						onClick = {
-							if (playlistName.isBlank()) {
-								errorMessage = "Please enter a playlist name"
-								return@IconButton
-							}
-
-							isLoading = true
-							coroutineScope.launch {
-								firebaseService.createPlaylist(
-									name = playlistName,
-									description = playlistDescription,
-									isPublic = isPublic
-								).fold(
-									onSuccess = {
-										// Navigate back to profile
-										navController.popBackStack()
-									},
-									onFailure = { error ->
-										errorMessage = "Failed to create playlist: ${error.message}"
-										isLoading = false
-									}
-								)
-							}
-						},
-						enabled = !isLoading && playlistName.isNotBlank()
-					) {
-						Icon(
-							imageVector = Icons.Default.Check,
-							contentDescription = "Save"
-						)
-					}
 				}
 			)
 		}
@@ -93,25 +61,26 @@ fun CreatePlaylistScreen(navController: NavController) {
 					.verticalScroll(rememberScrollState())
 			) {
 				// Playlist name
-				OutlinedTextField(
+				ModernTextField(
 					value = playlistName,
 					onValueChange = { playlistName = it },
-					label = { Text("Playlist Name") },
+					label = "Playlist Name",
 					modifier = Modifier.fillMaxWidth(),
-					singleLine = true,
-					isError = errorMessage != null && playlistName.isBlank()
+					isError = errorMessage != null && playlistName.isBlank(),
+					errorMessage = if (playlistName.isBlank() && errorMessage != null) "Please enter a playlist name" else null
 				)
 
 				Spacer(modifier = Modifier.height(16.dp))
 
 				// Playlist description
-				OutlinedTextField(
+				ModernTextField(
 					value = playlistDescription,
 					onValueChange = { playlistDescription = it },
-					label = { Text("Description (Optional)") },
+					label = "Description (Optional)",
 					modifier = Modifier.fillMaxWidth(),
 					minLines = 3,
-					maxLines = 5
+					maxLines = 5,
+					singleLine = false
 				)
 
 				Spacer(modifier = Modifier.height(16.dp))
@@ -160,12 +129,37 @@ fun CreatePlaylistScreen(navController: NavController) {
 				}
 			}
 
-			// Loading indicator
-			if (isLoading) {
-				CircularProgressIndicator(
-					modifier = Modifier.align(Alignment.Center)
-				)
-			}
+			Spacer(modifier = Modifier.height(24.dp))
+
+			GradientButton(
+				text = if (isLoading) "Creating..." else "Create Playlist",
+				onClick = {
+					if (playlistName.isBlank()) {
+						errorMessage = "Please enter a playlist name"
+						return@GradientButton
+					}
+
+					isLoading = true
+					coroutineScope.launch {
+						firebaseService.createPlaylist(
+							name = playlistName,
+							description = playlistDescription,
+							isPublic = isPublic
+						).fold(
+							onSuccess = {
+								// Navigate back to profile
+								navController.popBackStack()
+							},
+							onFailure = { error ->
+								errorMessage = "Failed to create playlist: ${error.message}"
+								isLoading = false
+							}
+						)
+					}
+				},
+				enabled = !isLoading && playlistName.isNotBlank(),
+				modifier = Modifier.fillMaxWidth()
+			)
 		}
 	}
 }

@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DisabledVisible
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -42,6 +44,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.xyzen.MainActivity
+import com.example.xyzen.components.GradientButton
+import com.example.xyzen.components.ModernTextField
 import com.example.xyzen.firebase.FirebaseServiceClass
 import com.example.xyzen.ui.theme.montserratFontFamily
 import com.google.firebase.auth.FirebaseUser
@@ -98,43 +102,26 @@ fun AuthenticationScreen() {
 				.height(20.dp)
 		)
 		if (!isLogin) {
-			OutlinedTextField(
+			ModernTextField(
 				value = userName,
 				onValueChange = {
 					userName = it
 				},
-				label = {
-					Text(
-						text = "Username",
-						fontFamily = montserratFontFamily,
-						fontWeight = FontWeight.Medium,
-					)
-				},
-				leadingIcon = {
-					Icon(Icons.Default.Person, contentDescription = "Username")
-				},
+				label = "Username",
+				leadingIcon = Icons.Default.Person,
 				modifier = Modifier.fillMaxWidth(),
 				singleLine = true,
 				keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
 			)
 			Spacer(modifier = Modifier.height(16.dp))
 		}
-		OutlinedTextField(
+		ModernTextField(
 			value = email,
 			onValueChange = {
 				email = it
 			},
-			label = {
-				Text(
-					text = "Email",
-					fontFamily = montserratFontFamily,
-					fontWeight = FontWeight.Medium,
-
-					)
-			},
-			leadingIcon = {
-				Icon(Icons.Default.Email, contentDescription = "Email")
-			},
+			label = "Email",
+			leadingIcon = Icons.Default.Email,
 			modifier = Modifier.fillMaxWidth(),
 			singleLine = true,
 			keyboardOptions = KeyboardOptions(
@@ -145,25 +132,17 @@ fun AuthenticationScreen() {
 
 		Spacer(modifier = Modifier.height(16.dp))
 
-		OutlinedTextField(
+		ModernTextField(
 			value = password,
 			onValueChange = {
 				password = it
 			},
-			label = {
-				Text(
-					text = "Password",
-					fontFamily = montserratFontFamily,
-					fontWeight = FontWeight.Medium,
-				)
-			},
-			leadingIcon = {
-				Icon(Icons.Default.Lock, contentDescription = "Password")
-			},
+			label = "Password",
+			leadingIcon = Icons.Default.Lock,
 			trailingIcon = {
 				IconButton(onClick = { passwordVisible = !passwordVisible }) {
 					Icon(
-						imageVector = if (passwordVisible) Icons.Default.Lock else Icons.Default.Lock,
+						imageVector = if (passwordVisible) Icons.Default.RemoveRedEye else Icons.Default.DisabledVisible,
 						contentDescription = if (passwordVisible) "Hide password" else "Show password"
 					)
 				}
@@ -187,7 +166,7 @@ fun AuthenticationScreen() {
 
 		Spacer(modifier = Modifier.height(24.dp))
 
-		Button(
+		GradientButton(
 			onClick = {
 				if (!isLogin && userName.isBlank()) {
 					errorMessage = "Username cannot be empty"
@@ -216,18 +195,9 @@ fun AuthenticationScreen() {
 				}
 			},
 			enabled = !isLoading,
-			modifier = Modifier.fillMaxWidth()
-		) {
-			if (isLoading) {
-				CircularProgressIndicator(
-					modifier = Modifier.padding(vertical = 2.dp),
-					color = MaterialTheme.colorScheme.onPrimary,
-					strokeWidth = 2.dp
-				)
-			} else {
-				Text(text = if (isLogin) "Login" else "Register")
-			}
-		}
+			modifier = Modifier.fillMaxWidth(),
+			text = if (isLogin) "Login" else "Register"
+		)
 
 		Spacer(modifier = Modifier.height(16.dp))
 
