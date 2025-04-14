@@ -1,13 +1,13 @@
-# Xyzen - Short Video Sharing App
+# Xyzen - Video/Music Sharing App
 
-Xyzen is a modern short video sharing platform built with Jetpack Compose for Android. It allows users to create, share, and discover short-form video content, create personalized playlists, and interact with other users.
+Xyzen is a modern short content and music sharing platform built with Jetpack Compose for Android. It allows users to create, share, and discover short-form musical content, create personalized playlists, and interact with other users.
 
 ## Features
 
 ### Core Functionality
-- **Video Feed**: Scroll through a vertical feed of short videos
+- **Feed**: Scroll through a vertical feed of shorts
 - **User Profiles**: Personalized profiles with user videos and playlists
-- **Video Upload**: Create and share your own short videos
+- **Upload Screen**: Create and share your own short videos
 - **Social Interactions**: Like videos and follow creators
 - **Playlists**: Create and manage personal playlists for organizing videos
 
