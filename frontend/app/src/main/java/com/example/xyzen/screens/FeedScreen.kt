@@ -55,10 +55,21 @@ fun FeedScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
-                val result = firebaseService.getVideosForFeed(20) // Fetch up to 20 videos
+//                val result = firebaseService.getVideosForFeed(20) // Fetch up to 20 videos
+//                result.fold(
+//                    onSuccess = { fetchedVideos ->
+//                        videos = fetchedVideos
+//                        isLoading = false
+//                    },
+//                    onFailure = { error ->
+//                        errorMessage = "Failed to load videos: ${error.message}"
+//                        isLoading = false
+//                    }
+//                )
+                val result = firebaseService.getRandomizedVideos()
                 result.fold(
-                    onSuccess = { fetchedVideos ->
-                        videos = fetchedVideos
+                    onSuccess = { videoList ->
+                        videos = videoList
                         isLoading = false
                     },
                     onFailure = { error ->

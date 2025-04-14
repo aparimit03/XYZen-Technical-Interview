@@ -459,4 +459,31 @@ class FirebaseServiceClass() {
 			Result.failure(e)
 		}
 	}
+
+	suspend fun getRandomizedVideos(limit: Int = 20): Result<List<Video>> {
+		return try {
+			// Get all videos
+			val videosSnapshot = firestore.collection("videos")
+				.get()
+				.await()
+
+			val allVideos = videosSnapshot.documents.mapNotNull { doc ->
+				doc.toObject(Video::class.java)
+			}
+
+			// Shuffle the videos to get a random order
+			val shuffledVideos = allVideos.shuffled()
+
+			// Limit the number of videos returned
+			val limitedVideos = if (shuffledVideos.size > limit) {
+				shuffledVideos.take(limit)
+			} else {
+				shuffledVideos
+			}
+
+			Result.success(limitedVideos)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
 }
