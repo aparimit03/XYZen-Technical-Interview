@@ -1,22 +1,58 @@
 package com.example.xyzen.screens
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Card
+import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +62,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -33,6 +70,7 @@ import coil3.compose.rememberAsyncImagePainter
 import com.example.xyzen.MainActivity
 import com.example.xyzen.R
 import com.example.xyzen.firebase.FirebaseServiceClass
+import com.example.xyzen.model.Playlist
 import com.example.xyzen.model.User
 import com.example.xyzen.model.Video
 import kotlinx.coroutines.launch
@@ -51,9 +89,17 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 	var isLoading by remember { mutableStateOf(true) }
 	var errorMessage by remember { mutableStateOf<String?>(null) }
 	var isCurrentUser by remember { mutableStateOf(false) }
+	var userPlaylists by remember { mutableStateOf<List<Playlist>>(emptyList()) }
+	var selectedTab by remember { mutableStateOf(0) } // 0 for Videos, 1 for Playlists
 
 	// Load user data when the screen is first displayed
 	LaunchedEffect(userId) {
+		try {
+			val currentUser = firebaseService.getCurrentUser()
+		} catch (e: Exception) {
+			Log.e("ProfileScreen", "Error getting current user", e)
+			// Handle error appropriately
+		}
 		val currentUser = firebaseService.getCurrentUser()
 		// Determine which user ID to use
 		val targetUserId = userId ?: currentUser?.uid
@@ -69,15 +115,27 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 					userResult.fold(
 						onSuccess = { userData ->
 							user = userData
+
 							// Fetch user videos
 							val videosResult = firebaseService.getUserVideos(targetUserId)
 							videosResult.fold(
 								onSuccess = { videos ->
 									userVideos = videos
-									isLoading = false
 								},
 								onFailure = { error ->
 									errorMessage = "Failed to load videos: ${error.message}"
+								}
+							)
+
+							// Fetch user playlists
+							val playlistsResult = firebaseService.getUserPlaylists(targetUserId)
+							playlistsResult.fold(
+								onSuccess = { playlists ->
+									userPlaylists = playlists
+									isLoading = false
+								},
+								onFailure = { error ->
+									errorMessage = "Failed to load playlists: ${error.message}"
 									isLoading = false
 								}
 							)
@@ -180,49 +238,117 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 							showEditButton = isCurrentUser
 						)
 
-					Spacer(modifier = Modifier.height(24.dp))
-
-					// Bio section
-					if (user?.bio?.isNotEmpty() == true) {
-						Text(
-							text = user?.bio ?: "",
-							style = MaterialTheme.typography.bodyMedium,
-							textAlign = TextAlign.Center,
-							modifier = Modifier.padding(horizontal = 32.dp)
-						)
 						Spacer(modifier = Modifier.height(24.dp))
-					}
 
-					// Videos section
-					Text(
-						text = "Videos",
-						style = MaterialTheme.typography.titleLarge,
-						fontWeight = FontWeight.Bold
-					)
-
-					Spacer(modifier = Modifier.height(8.dp))
-
-					if (userVideos.isEmpty()) {
-						Box(
-							modifier = Modifier
-								.fillMaxWidth()
-								.height(200.dp),
-							contentAlignment = Alignment.Center
-						) {
-							Text("No videos uploaded yet")
+						// Bio section
+						if (user?.bio?.isNotEmpty() == true) {
+							Text(
+								text = user?.bio ?: "",
+								style = MaterialTheme.typography.bodyMedium,
+								textAlign = TextAlign.Center,
+								modifier = Modifier.padding(horizontal = 32.dp)
+							)
+							Spacer(modifier = Modifier.height(24.dp))
 						}
-					} else {
-						// Grid of videos
-						LazyVerticalGrid(
-							columns = GridCells.Fixed(3),
-							horizontalArrangement = Arrangement.spacedBy(4.dp),
-							verticalArrangement = Arrangement.spacedBy(4.dp),
+
+						// Tab row for Videos and Playlists
+						TabRow(
+							selectedTabIndex = selectedTab,
 							modifier = Modifier.fillMaxWidth()
 						) {
-							items(userVideos) { video ->
-								VideoThumbnail(video = video) {
-									// Handle video click - navigate to video detail
-									navController.navigate("video_detail/${video.id}")
+							Tab(
+								selected = selectedTab == 0,
+								onClick = { selectedTab = 0 },
+								text = { Text("Videos") }
+							)
+							Tab(
+								selected = selectedTab == 1,
+								onClick = { selectedTab = 1 },
+								text = { Text("Playlists") }
+							)
+						}
+
+						Spacer(modifier = Modifier.height(16.dp))
+
+						// Content based on selected tab
+						when (selectedTab) {
+							0 -> {
+								// Videos tab
+								if (userVideos.isEmpty()) {
+									Box(
+										modifier = Modifier
+											.fillMaxWidth()
+											.height(200.dp),
+										contentAlignment = Alignment.Center
+									) {
+										Text("No videos uploaded yet")
+									}
+								} else {
+									// Grid of videos
+									LazyVerticalGrid(
+										columns = GridCells.Fixed(3),
+										horizontalArrangement = Arrangement.spacedBy(4.dp),
+										verticalArrangement = Arrangement.spacedBy(4.dp),
+										modifier = Modifier.fillMaxWidth()
+									) {
+										items(userVideos) { video ->
+											VideoThumbnail(video = video) {
+												// Handle video click - navigate to video detail
+												navController.navigate("video_detail/${video.id}")
+											}
+										}
+									}
+								}
+							}
+
+							1 -> {
+								// Playlists tab
+								Box(modifier = Modifier.fillMaxWidth()) {
+									// Add playlist button (only for current user)
+									if (isCurrentUser) {
+										FloatingActionButton(
+											onClick = { navController.navigate("create_playlist") },
+											modifier = Modifier
+												.align(Alignment.TopEnd)
+												.padding(8.dp)
+										) {
+											Icon(
+												imageVector = Icons.Default.Add,
+												contentDescription = "Create Playlist"
+											)
+										}
+									}
+
+									if (userPlaylists.isEmpty()) {
+										Box(
+											modifier = Modifier
+												.fillMaxWidth()
+												.height(200.dp),
+											contentAlignment = Alignment.Center
+										) {
+											Text(
+												text = if (isCurrentUser)
+													"You haven't created any playlists yet"
+												else
+													"${user?.username} hasn't created any playlists yet"
+											)
+										}
+									} else {
+										// List of playlists
+										LazyColumn(
+											modifier = Modifier.fillMaxWidth(),
+											verticalArrangement = Arrangement.spacedBy(8.dp)
+										) {
+											items(userPlaylists) { playlist ->
+												PlaylistItem(
+													playlist = playlist,
+													onClick = {
+														navController.navigate("playlist/${playlist.id}")
+													}
+												)
+											}
+										}
+									}
 								}
 							}
 						}
@@ -231,7 +357,6 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 			}
 		}
 	}
-}
 }
 
 @Composable
@@ -377,6 +502,100 @@ fun VideoThumbnail(video: Video, onClick: () -> Unit) {
 				contentDescription = "Play video",
 				tint = Color.White,
 				modifier = Modifier.size(48.dp)
+			)
+		}
+	}
+}
+
+@Composable
+fun PlaylistItem(playlist: Playlist, onClick: () -> Unit) {
+	Card(
+		modifier = Modifier
+			.fillMaxWidth()
+			.clickable(onClick = onClick),
+		elevation = 2.dp
+	) {
+		Row(
+			modifier = Modifier
+				.fillMaxWidth()
+				.padding(8.dp),
+			verticalAlignment = Alignment.CenterVertically
+		) {
+			// Playlist cover image
+			Box(
+				modifier = Modifier
+					.size(80.dp)
+					.clip(RoundedCornerShape(4.dp))
+					.background(MaterialTheme.colorScheme.surfaceVariant)
+			) {
+				if (playlist.coverImageUrl != null) {
+					AsyncImage(
+						model = playlist.coverImageUrl,
+						contentDescription = "Playlist cover",
+						modifier = Modifier.fillMaxSize(),
+						contentScale = ContentScale.Crop
+					)
+				} else {
+					// Default playlist icon
+					Icon(
+						imageVector = Icons.Default.PlaylistPlay,
+						contentDescription = "Playlist",
+						modifier = Modifier
+							.size(40.dp)
+							.align(Alignment.Center),
+						tint = MaterialTheme.colorScheme.onSurfaceVariant
+					)
+				}
+
+				// Video count badge
+				Box(
+					modifier = Modifier
+						.align(Alignment.BottomEnd)
+						.background(
+							color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+							shape = RoundedCornerShape(4.dp)
+						)
+						.padding(horizontal = 4.dp, vertical = 2.dp)
+				) {
+					Text(
+						text = "${playlist.videos.size}",
+						style = MaterialTheme.typography.labelSmall,
+						color = MaterialTheme.colorScheme.onPrimary
+					)
+				}
+			}
+
+			Spacer(modifier = Modifier.width(12.dp))
+
+			// Playlist info
+			Column(
+				modifier = Modifier.weight(1f)
+			) {
+				Text(
+					text = playlist.name,
+					style = MaterialTheme.typography.titleMedium,
+					fontWeight = FontWeight.Bold,
+					maxLines = 1,
+					overflow = TextOverflow.Ellipsis
+				)
+
+				if (playlist.description.isNotEmpty()) {
+					Text(
+						text = playlist.description,
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						maxLines = 2,
+						overflow = TextOverflow.Ellipsis
+					)
+				}
+			}
+
+			// Visibility icon
+			Icon(
+				imageVector = if (playlist.isPublic) Icons.Default.Public else Icons.Default.Lock,
+				contentDescription = if (playlist.isPublic) "Public" else "Private",
+				tint = MaterialTheme.colorScheme.onSurfaceVariant,
+				modifier = Modifier.padding(8.dp)
 			)
 		}
 	}

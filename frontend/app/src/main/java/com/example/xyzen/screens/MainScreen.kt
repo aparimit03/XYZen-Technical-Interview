@@ -32,16 +32,41 @@ fun MainScreen() {
 			composable(BottomNavItem.Upload.route) { UploadScreen() }
 			composable(BottomNavItem.Profile.route) { ProfileScreen(navController) }
 			composable(BottomNavItem.Notifications.route) { NotificationsScreen() }
-			composable("video_detail/{videoId}") { backStackEntry ->
+
+			composable(
+				route = "video_detail/{videoId}",
+				arguments = listOf(navArgument("videoId") { type = NavType.StringType })
+			) { backStackEntry ->
 				val videoId = backStackEntry.arguments?.getString("videoId") ?: ""
-				VideoDetailScreen(navController, videoId)
+				VideoDetailScreen(navController = navController, videoId = videoId)
 			}
+
 			composable(
 				route = "profile/{userId}",
 				arguments = listOf(navArgument("userId") { type = NavType.StringType })
 			) { backStackEntry ->
 				val userId = backStackEntry.arguments?.getString("userId")
 				ProfileScreen(navController = navController, userId = userId)
+			}
+
+			composable("create_playlist") {
+				CreatePlaylistScreen(navController = navController)
+			}
+
+			composable(
+				route = "playlist/{playlistId}",
+				arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
+			) { backStackEntry ->
+				val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
+				PlaylistDetailScreen(navController = navController, playlistId = playlistId)
+			}
+
+			composable(
+				route = "edit_playlist/{playlistId}",
+				arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
+			) { backStackEntry ->
+				val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
+				EditPlaylistScreen(navController = navController, playlistId = playlistId)
 			}
 		}
 	}

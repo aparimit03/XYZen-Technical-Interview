@@ -2,11 +2,17 @@ package com.example.xyzen.screens
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.PlaylistAddCheck
+import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,6 +27,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import com.example.xyzen.firebase.FirebaseServiceClass
+import com.example.xyzen.model.Playlist
 import com.example.xyzen.model.Video
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -38,6 +45,7 @@ fun VideoDetailScreen(navController: NavController, videoId: String) {
 	var isLoading by remember { mutableStateOf(true) }
 	var errorMessage by remember { mutableStateOf<String?>(null) }
 	var isPlaying by remember { mutableStateOf(true) }
+	var showAddToPlaylistDialog by remember { mutableStateOf(false) }
 
 	// Load video data
 	LaunchedEffect(videoId) {
@@ -70,6 +78,14 @@ fun VideoDetailScreen(navController: NavController, videoId: String) {
 						Icon(
 							imageVector = Icons.Default.ArrowBack,
 							contentDescription = "Back"
+						)
+					}
+				},
+				actions = {
+					IconButton(onClick = { showAddToPlaylistDialog = true }) {
+						Icon(
+							imageVector = Icons.Default.PlaylistAdd,
+							contentDescription = "Add to playlist"
 						)
 					}
 				}
@@ -205,6 +221,13 @@ fun VideoDetailScreen(navController: NavController, videoId: String) {
 					}
 				}
 			}
+			if (showAddToPlaylistDialog) {
+				AddToPlaylistDialog(
+					videoId = videoId,
+					onDismiss = { showAddToPlaylistDialog = false },
+					navController = navController  // Pass the navController to the dialog
+				)
+			}
 		}
 	}
 }
@@ -260,4 +283,133 @@ fun FullVideoPlayer(videoUrl: String, isPlaying: Boolean, onPlayPauseToggle: () 
 			}
 		)
 	}
+}
+
+@Composable
+fun AddToPlaylistDialog(
+	videoId: String,
+	onDismiss: () -> Unit,
+	navController: NavController  // Add navController parameter
+) {
+	val firebaseService = remember { FirebaseServiceClass() }
+	val coroutineScope = rememberCoroutineScope()
+
+	var userPlaylists by remember { mutableStateOf<List<Playlist>>(emptyList()) }
+	var isLoading by remember { mutableStateOf(true) }
+	var errorMessage by remember { mutableStateOf<String?>(null) }
+
+	// Load user playlists
+	LaunchedEffect(Unit) {
+		coroutineScope.launch {
+			try {
+				val currentUser = firebaseService.getCurrentUser()
+				if (currentUser != null) {
+					val playlistsResult = firebaseService.getUserPlaylists(currentUser.uid)
+					playlistsResult.fold(
+						onSuccess = { playlists ->
+							userPlaylists = playlists
+							isLoading = false
+						},
+						onFailure = { error ->
+							errorMessage = "Failed to load playlists: ${error.message}"
+							isLoading = false
+						}
+					)
+				} else {
+					errorMessage = "You need to be logged in to add videos to playlists"
+					isLoading = false
+				}
+			} catch (e: Exception) {
+				errorMessage = "An error occurred: ${e.message}"
+				isLoading = false
+			}
+		}
+	}
+
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		title = { Text("Add to Playlist") },
+		text = {
+			Box(
+				modifier = Modifier
+					.fillMaxWidth()
+					.height(300.dp)
+			) {
+				when {
+					isLoading -> {
+						CircularProgressIndicator(
+							modifier = Modifier.align(Alignment.Center)
+						)
+					}
+
+					errorMessage != null -> {
+						Text(
+							text = errorMessage ?: "Unknown error",
+							color = MaterialTheme.colorScheme.error,
+							modifier = Modifier.align(Alignment.Center)
+						)
+					}
+
+					userPlaylists.isEmpty() -> {
+						Column(
+							horizontalAlignment = Alignment.CenterHorizontally,
+							modifier = Modifier.align(Alignment.Center)
+						) {
+							Text("You don't have any playlists yet")
+
+							Spacer(modifier = Modifier.height(16.dp))
+
+							Button(
+								onClick = {
+									onDismiss()
+									navController.navigate("create_playlist")
+								}
+							) {
+								Text("Create Playlist")
+							}
+						}
+					}
+
+					else -> {
+						LazyColumn {
+							items(userPlaylists) { playlist ->
+								Row(
+									verticalAlignment = Alignment.CenterVertically,
+									modifier = Modifier
+										.fillMaxWidth()
+										.clickable {
+											coroutineScope.launch {
+												firebaseService.addVideosToPlaylist(
+													playlistId = playlist.id,
+													videoIds = listOf(videoId)
+												)
+												onDismiss()
+											}
+										}
+										.padding(vertical = 8.dp)
+								) {
+									Icon(
+										imageVector = Icons.Default.PlaylistAddCheck,
+										contentDescription = null
+									)
+
+									Spacer(modifier = Modifier.width(16.dp))
+
+									Text(
+										text = playlist.name,
+										style = MaterialTheme.typography.bodyLarge
+									)
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		confirmButton = {
+			TextButton(onClick = onDismiss) {
+				Text("Cancel")
+			}
+		}
+	)
 }

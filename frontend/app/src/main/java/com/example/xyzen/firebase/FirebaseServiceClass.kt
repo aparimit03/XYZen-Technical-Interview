@@ -1,6 +1,8 @@
 package com.example.xyzen.firebase
 
 import android.net.Uri
+import android.util.Log
+import com.example.xyzen.model.Playlist
 import com.example.xyzen.model.User
 import com.example.xyzen.model.Video
 import com.google.firebase.Timestamp
@@ -234,6 +236,225 @@ class FirebaseServiceClass() {
 				.await()
 
 			Result.success(!likeDoc.isEmpty)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	suspend fun createPlaylist(
+		name: String,
+		description: String,
+		coverImageUrl: String? = null,
+		videos: List<String> = emptyList(),
+		isPublic: Boolean = true
+	): Result<Playlist> {
+		return try {
+			val currentUser = getCurrentUser() ?: throw Exception("User not logged in")
+
+			// Generate a new playlist ID
+			val playlistId = firestore.collection("playlists").document().id
+
+			val playlist = Playlist(
+				id = playlistId,
+				userId = currentUser.uid,
+				name = name,
+				description = description,
+				coverImageUrl = coverImageUrl,
+				videos = videos,
+				isPublic = isPublic,
+				timestamp = Timestamp.now()
+			)
+
+			// Save playlist to Firestore
+			firestore.collection("playlists").document(playlistId)
+				.set(playlist)
+				.await()
+
+			Result.success(playlist)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	// Get playlists for a user
+	suspend fun getUserPlaylists(userId: String): Result<List<Playlist>> {
+		Log.d(TAG, "Getting playlists for user: $userId")
+		return try {
+			val query = firestore.collection("playlists")
+				.whereEqualTo("userId", userId)
+			Log.e(TAG, "Got playlists1")
+
+			// If not the current user, only show public playlists
+			val currentUser = getCurrentUser()
+			if (currentUser == null || currentUser.uid != userId) {
+				query.whereEqualTo("isPublic", true)
+			}
+			Log.e(TAG, "Got playlists2")
+
+			// IMPORTANT FIX: The query needs to be executed with get()
+			val playlistsSnapshot = query
+				.orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+				.get()
+				.await()
+			Log.e(TAG, "Got playlists3")
+
+			Log.d(TAG, "Playlists snapshot documents count: ${playlistsSnapshot.documents.size}")
+
+			val playlists = playlistsSnapshot.documents.mapNotNull { doc ->
+				try {
+					val playlist = doc.toObject(Playlist::class.java)
+					Log.d(TAG, "Converted playlist: ${playlist?.name}")
+					playlist
+				} catch (e: Exception) {
+					Log.e(TAG, "Error converting document to Playlist", e)
+					null
+				}
+			}
+
+			Log.d(TAG, "Successfully retrieved ${playlists.size} playlists")
+			Result.success(playlists)
+		} catch (e: Exception) {
+			Log.e(TAG, "Error getting playlists", e)
+			Result.failure(e)
+		}
+	}
+
+	// Add videos to a playlist
+	suspend fun addVideosToPlaylist(playlistId: String, videoIds: List<String>): Result<Unit> {
+		return try {
+			val currentUser = getCurrentUser() ?: throw Exception("User not logged in")
+
+			// Get the playlist
+			val playlistDoc = firestore.collection("playlists").document(playlistId).get().await()
+			val playlist = playlistDoc.toObject(Playlist::class.java)
+				?: throw Exception("Playlist not found")
+
+			// Check if the current user owns the playlist
+			if (playlist.userId != currentUser.uid) {
+				throw Exception("You don't have permission to modify this playlist")
+			}
+
+			// Add videos to the playlist (avoiding duplicates)
+			val updatedVideos = (playlist.videos + videoIds).distinct()
+
+			// Update the playlist
+			firestore.collection("playlists").document(playlistId)
+				.update("videos", updatedVideos)
+				.await()
+
+			Result.success(Unit)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	// Remove videos from a playlist
+	suspend fun removeVideosFromPlaylist(playlistId: String, videoIds: List<String>): Result<Unit> {
+		return try {
+			val currentUser = getCurrentUser() ?: throw Exception("User not logged in")
+
+			// Get the playlist
+			val playlistDoc = firestore.collection("playlists").document(playlistId).get().await()
+			val playlist = playlistDoc.toObject(Playlist::class.java)
+				?: throw Exception("Playlist not found")
+
+			// Check if the current user owns the playlist
+			if (playlist.userId != currentUser.uid) {
+				throw Exception("You don't have permission to modify this playlist")
+			}
+
+			// Remove videos from the playlist
+			val updatedVideos = playlist.videos.filter { it !in videoIds }
+
+			// Update the playlist
+			firestore.collection("playlists").document(playlistId)
+				.update("videos", updatedVideos)
+				.await()
+
+			Result.success(Unit)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	// Delete a playlist
+	suspend fun deletePlaylist(playlistId: String): Result<Unit> {
+		return try {
+			val currentUser = getCurrentUser() ?: throw Exception("User not logged in")
+
+			// Get the playlist
+			val playlistDoc = firestore.collection("playlists").document(playlistId).get().await()
+			val playlist = playlistDoc.toObject(Playlist::class.java)
+				?: throw Exception("Playlist not found")
+
+			// Check if the current user owns the playlist
+			if (playlist.userId != currentUser.uid) {
+				throw Exception("You don't have permission to delete this playlist")
+			}
+
+			// Delete the playlist
+			firestore.collection("playlists").document(playlistId)
+				.delete()
+				.await()
+
+			Result.success(Unit)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	// Get a playlist by ID
+	suspend fun getPlaylistById(playlistId: String): Result<Playlist> {
+		return try {
+			val playlistDoc = firestore.collection("playlists").document(playlistId).get().await()
+			val playlist = playlistDoc.toObject(Playlist::class.java)
+				?: throw Exception("Playlist not found")
+
+			// If not public and not the owner, throw exception
+			val currentUser = getCurrentUser()
+			if (!playlist.isPublic && (currentUser == null || currentUser.uid != playlist.userId)) {
+				throw Exception("You don't have permission to view this playlist")
+			}
+
+			Result.success(playlist)
+		} catch (e: Exception) {
+			Result.failure(e)
+		}
+	}
+
+	// Get videos in a playlist
+	suspend fun getPlaylistVideos(playlistId: String): Result<List<Video>> {
+		return try {
+			// Get the playlist
+			val playlistResult = getPlaylistById(playlistId)
+
+			playlistResult.fold(
+				onSuccess = { playlist ->
+					if (playlist.videos.isEmpty()) {
+						return Result.success(emptyList())
+					}
+
+					// Get the videos
+					val videosSnapshot = firestore.collection("videos")
+						.whereIn("id", playlist.videos)
+						.get()
+						.await()
+
+					val videos = videosSnapshot.documents.mapNotNull { doc ->
+						doc.toObject(Video::class.java)
+					}
+
+					// Sort videos to match the order in the playlist
+					val sortedVideos = playlist.videos.mapNotNull { videoId ->
+						videos.find { it.id == videoId }
+					}
+
+					Result.success(sortedVideos)
+				},
+				onFailure = {
+					Result.failure(it)
+				}
+			)
 		} catch (e: Exception) {
 			Result.failure(e)
 		}
