@@ -127,39 +127,38 @@ fun CreatePlaylistScreen(navController: NavController) {
 						style = MaterialTheme.typography.bodyMedium
 					)
 				}
+				Spacer(modifier = Modifier.height(24.dp))
+
+				GradientButton(
+					text = if (isLoading) "Creating..." else "Create Playlist",
+					onClick = {
+						if (playlistName.isBlank()) {
+							errorMessage = "Please enter a playlist name"
+							return@GradientButton
+						}
+
+						isLoading = true
+						coroutineScope.launch {
+							firebaseService.createPlaylist(
+								name = playlistName,
+								description = playlistDescription,
+								isPublic = isPublic
+							).fold(
+								onSuccess = {
+									// Navigate back to profile
+									navController.popBackStack()
+								},
+								onFailure = { error ->
+									errorMessage = "Failed to create playlist: ${error.message}"
+									isLoading = false
+								}
+							)
+						}
+					},
+					enabled = !isLoading && playlistName.isNotBlank(),
+					modifier = Modifier.fillMaxWidth()
+				)
 			}
-
-			Spacer(modifier = Modifier.height(24.dp))
-
-			GradientButton(
-				text = if (isLoading) "Creating..." else "Create Playlist",
-				onClick = {
-					if (playlistName.isBlank()) {
-						errorMessage = "Please enter a playlist name"
-						return@GradientButton
-					}
-
-					isLoading = true
-					coroutineScope.launch {
-						firebaseService.createPlaylist(
-							name = playlistName,
-							description = playlistDescription,
-							isPublic = isPublic
-						).fold(
-							onSuccess = {
-								// Navigate back to profile
-								navController.popBackStack()
-							},
-							onFailure = { error ->
-								errorMessage = "Failed to create playlist: ${error.message}"
-								isLoading = false
-							}
-						)
-					}
-				},
-				enabled = !isLoading && playlistName.isNotBlank(),
-				modifier = Modifier.fillMaxWidth()
-			)
 		}
 	}
 }

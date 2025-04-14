@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,6 +49,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.example.xyzen.components.AudioWaveform
 import com.example.xyzen.firebase.FirebaseServiceClass
 import com.example.xyzen.model.User
 import com.example.xyzen.model.Video
@@ -245,6 +247,15 @@ fun VideoFeed(videos: List<Video>, navController: NavController) {
 						color = Color.White,
 						fontWeight = FontWeight.Bold
 					)
+
+					// Audio waveform overlay
+					AudioWaveform(
+						isPlaying = isCurrentlyPlaying,
+						color = Color.White.copy(alpha = 0.4f),
+						modifier = Modifier
+							.width(100.dp)
+							.height(10.dp)
+					)
 				}
 
 				// Caption (if any)
@@ -272,8 +283,34 @@ fun VideoFeed(videos: List<Video>, navController: NavController) {
 				// Like button
 				LikeButton(videoId = video.id, initialLikeCount = video.likes)
 
-//                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
+				var showAddToPlaylistDialog by remember { mutableStateOf(false) }
+
+				IconButton(
+					onClick = { showAddToPlaylistDialog = true },
+					modifier = Modifier
+						.size(48.dp)
+						.background(
+							color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+							shape = CircleShape
+						)
+				) {
+					Icon(
+						imageVector = Icons.Default.PlaylistAdd,
+						contentDescription = "Add to playlist",
+						tint = Color.White
+					)
+				}
+
+				// Add the dialog
+				if (showAddToPlaylistDialog) {
+					AddToPlaylistDialog(
+						videoId = video.id,
+						onDismiss = { showAddToPlaylistDialog = false },
+						navController = navController
+					)
+				}
 			}
 		}
 	}

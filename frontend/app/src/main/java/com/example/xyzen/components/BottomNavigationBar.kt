@@ -49,6 +49,11 @@ fun BottomNavigationBar(navController: NavHostController) {
 						navController.navigate(item.route) {
 							popUpTo(navController.graph.startDestinationId)
 							launchSingleTop = true
+
+							anim {
+								this.enter = 0
+								this.exit = 0
+							}
 						}
 					}
 				}

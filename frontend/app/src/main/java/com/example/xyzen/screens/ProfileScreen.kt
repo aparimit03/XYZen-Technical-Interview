@@ -25,18 +25,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
-import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -297,51 +295,57 @@ fun ProfileScreen(navController: NavController, userId: String? = null) {
 							}
 
 							1 -> {
-								// Playlists tab
-								Box(modifier = Modifier.fillMaxWidth()) {
-									// Add playlist button (only for current user)
-									if (isCurrentUser) {
-										FloatingActionButton(
+								if (isCurrentUser) {
+									Row(
+										modifier = Modifier
+											.fillMaxWidth()
+											.padding(bottom = 8.dp),
+										horizontalArrangement = Arrangement.End
+									) {
+										Button(
 											onClick = { navController.navigate("create_playlist") },
-											modifier = Modifier
-												.align(Alignment.TopEnd)
-												.padding(8.dp)
+											colors = ButtonDefaults.buttonColors(
+												containerColor = MaterialTheme.colorScheme.primary
+											)
 										) {
 											Icon(
 												imageVector = Icons.Default.Add,
-												contentDescription = "Create Playlist"
+												contentDescription = null,
+												modifier = Modifier.size(20.dp)
 											)
+											Spacer(modifier = Modifier.width(8.dp))
+											Text("Create Playlist")
 										}
 									}
+								}
 
-									if (userPlaylists.isEmpty()) {
-										Box(
-											modifier = Modifier
-												.fillMaxWidth()
-												.height(200.dp),
-											contentAlignment = Alignment.Center
-										) {
-											Text(
-												text = if (isCurrentUser)
-													"You haven't created any playlists yet"
-												else
-													"${user?.username} hasn't created any playlists yet"
+								if (userPlaylists.isEmpty()) {
+									Box(
+										modifier = Modifier
+											.fillMaxWidth()
+											.height(200.dp),
+										contentAlignment = Alignment.Center
+									) {
+										Text(
+											text = if (isCurrentUser)
+												"You haven't created any playlists yet"
+											else
+												"${user?.username} hasn't created any playlists yet"
+										)
+									}
+								} else {
+									// List of playlists
+									LazyColumn(
+										modifier = Modifier.fillMaxWidth(),
+										verticalArrangement = Arrangement.spacedBy(8.dp)
+									) {
+										items(userPlaylists) { playlist ->
+											PlaylistItem(
+												playlist = playlist,
+												onClick = {
+													navController.navigate("playlist/${playlist.id}")
+												}
 											)
-										}
-									} else {
-										// List of playlists
-										LazyColumn(
-											modifier = Modifier.fillMaxWidth(),
-											verticalArrangement = Arrangement.spacedBy(8.dp)
-										) {
-											items(userPlaylists) { playlist ->
-												PlaylistItem(
-													playlist = playlist,
-													onClick = {
-														navController.navigate("playlist/${playlist.id}")
-													}
-												)
-											}
 										}
 									}
 								}

@@ -1,5 +1,7 @@
 package com.example.xyzen.screens
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -26,7 +28,9 @@ fun MainScreen() {
 		NavHost(
 			navController = navController,
 			startDestination = BottomNavItem.Feed.route,
-			modifier = Modifier.padding(innerPadding)
+			modifier = Modifier.padding(innerPadding),
+			enterTransition = { EnterTransition.None },
+			exitTransition = { ExitTransition.None }
 		) {
 			composable(BottomNavItem.Feed.route) { FeedScreen(navController) }
 			composable(BottomNavItem.Upload.route) { UploadScreen() }
