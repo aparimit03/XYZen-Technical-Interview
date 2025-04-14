@@ -2,6 +2,7 @@ package com.example.xyzen.screens
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -180,7 +181,12 @@ fun VideoFeed(videos: List<Video>, navController: NavController) {
                 // User info
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .clickable {
+                            // Navigate to creator's profile
+                            navController.navigate("profile/${video.userId}")
+                        }
                 ) {
                     // Profile picture - use creator's profile image if available
                     AsyncImage(
@@ -227,41 +233,8 @@ fun VideoFeed(videos: List<Video>, navController: NavController) {
                 // Like button
                 LikeButton(videoId = video.id, initialLikeCount = video.likes)
 
-                Spacer(modifier = Modifier.height(16.dp))
+//                Spacer(modifier = Modifier.height(16.dp))
 
-                // Profile button
-                IconButton(
-                    onClick = { /* Go to profile */ },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.3f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = "Profile",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // More options
-                IconButton(
-                    onClick = { /* More options */ },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.3f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More options",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-				}
 			}
 		}
 	}
