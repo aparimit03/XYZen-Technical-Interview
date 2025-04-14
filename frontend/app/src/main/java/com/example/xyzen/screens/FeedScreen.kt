@@ -309,7 +309,7 @@ fun VideoPlayer(videoUrl: String, isPlaying: Boolean) {
             PlayerView(ctx).apply {
                 player = exoPlayer
                 useController = false // Hide the default controls
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM // Fill the screen
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT // Fit in the screen
             }
         },
         modifier = Modifier.fillMaxSize()
